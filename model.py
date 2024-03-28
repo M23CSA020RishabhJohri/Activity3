@@ -70,3 +70,44 @@ model_adagrad, train_loss_adagrad, train_accuracy_adagrad = train_model(resnet10
 
 optimizer_adadelta = optim.Adadelta(resnet101.parameters(),lr=0.001)
 model_adadelta, train_loss_adadelta, train_accuracy_adadelta = train_model(resnet101, criterion, optimizer_adadelta)
+def evaluate_model(model, testloader):
+    model.eval()
+    #model = model.to('cuda')
+    top5_correct = 0
+
+    with torch.no_grad():
+        for inputs, labels in testloader:
+            #inputs, labels = inputs.to('cuda'), labels.to('cuda')
+            outputs = model(inputs)
+            _, top5_preds = outputs.topk(5, 1, True, True)
+            top5_correct += torch.sum(top5_preds.eq(labels.view(-1, 1).expand_as(top5_preds)))
+
+    top5_acc = top5_correct.double() / len(testloader.dataset)
+    return top5_acc
+
+# Evaluate for each model and optimizer
+top5_acc_adam = evaluate_model(model_adam, testloader)
+print(f'Top-5 Accuracy with Adam: {top5_acc_adam}')
+
+# Plot the training loss and accuracy
+def plot_metrics(train_loss, train_accuracy, title=''):
+    plt.figure(figsize=(12, 5))
+    plt.subplot(1, 2, 1)
+    plt.plot(train_loss, label='Train Loss')
+    plt.title(f'Training Loss {title}')
+    plt.legend()
+    plt.subplot(1, 2, 2)
+    plt.plot(train_accuracy, label='Train Accuracy')
+    plt.title(f'Training Accuracy {title}')
+    plt.legend()
+    plt.show()
+
+plot_metrics(train_loss_adam, train_accuracy_adam, 'with Adam')
+top5_acc_adagrad = evaluate_model(model_adagrad, testloader)
+print(f'Top-5 Accuracy with Adagrad: {top5_acc_adagrad}')
+
+plot_metrics(train_loss_adagrad, train_accuracy_adagrad, 'with Adagrad')
+top5_acc_adadelta = evaluate_model(model_adadelta, testloader)
+print(f'Top-5 Accuracy with Adadelta: {top5_acc_adadelta}')
+
+plot_metrics(train_loss_adadelta, train_accuracy_adagrad, 'with Adadelta')
